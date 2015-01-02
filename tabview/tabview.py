@@ -7,6 +7,7 @@
 import csv
 import curses
 import _curses
+from curses import textpad
 import locale
 import os
 import os.path
@@ -236,20 +237,31 @@ class Viewer:
             scr2 = curses.newwin(4, 40, 15, 15)
             scr2.box()
             scr2.move(1, 1)
-            scr2.addstr("Search: ")
-            curses.echo()
-            search = scr2.getstr().decode(sys.stdout.encoding).lower()
-            curses.noecho()
+            scr2.addstr("Search:")
+            scr2.refresh()
+            scr3 = curses.newwin(2, 30, 16, 24)
+
+            def ret_end(c):
+                if c == curses.ascii.NL:
+                    return curses.ascii.BEL
+                return c
+
+            curses.curs_set(True)
+            textbox = textpad.Textbox(scr3, insert_mode=True)
+            search = textbox.edit(ret_end)[0:-2].lower()
+            curses.curs_set(False)
+
             if search:
-                self.res = [(y, x) for y, line in enumerate(self.data) for
-                            x, item in enumerate(line)
+                self.res = [(y, x) for y, line in enumerate(self.data)
+                            for x, item in enumerate(line)
                             if search in item.lower()]
                 self.res_idx = 0
-                self.x = self.y = 0
             else:
                 self.res = []
             if self.res:
-                self.win_y, self.win_x = self.res[self.res_idx]
+                y, x = self.res[self.res_idx]
+                goto_y(y + 1)
+                goto_x(x + 1)
 
         def next_result():
             if self.res:
@@ -257,8 +269,9 @@ class Viewer:
                     self.res_idx += 1
                 else:
                     self.res_idx = 0
-                self.x = self.y = 0
-                self.win_y, self.win_x = self.res[self.res_idx]
+                y, x = self.res[self.res_idx]
+                goto_y(y + 1)
+                goto_x(x + 1)
 
         def prev_result():
             if self.res:
@@ -267,7 +280,9 @@ class Viewer:
                 else:
                     self.res_idx = len(self.res) - 1
                 self.x = self.y = 0
-                self.win_y, self.win_x = self.res[self.res_idx]
+                y, x = self.res[self.res_idx]
+                goto_y(y + 1)
+                goto_x(x + 1)
 
         def help():
             help_txt = readme()
