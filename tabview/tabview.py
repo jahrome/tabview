@@ -232,8 +232,8 @@ class Viewer:
                 pass
 
         def search():
-            """Search (case independent) from the top for string and goto
-            that spot"""
+            """Open a text box to search (case independent) from the top for
+            string and goto that spot."""
             scr2 = curses.newwin(4, 40, 15, 15)
             scr2.box()
             scr2.move(1, 1)
@@ -248,41 +248,75 @@ class Viewer:
 
             curses.curs_set(True)
             textbox = textpad.Textbox(scr3, insert_mode=True)
-            search = textbox.edit(ret_end)[0:-2].lower()
+            self.search = textbox.edit(ret_end)[0:-2].lower()
             curses.curs_set(False)
+            search_results()
+            if self.res:
+                next_result()
 
+        def search_results():
+            """Calculate search results from a string. Set self.res"""
             if search:
                 self.res = [(y, x) for y, line in enumerate(self.data)
                             for x, item in enumerate(line)
-                            if search in item.lower()]
+                            if self.search in item.lower()]
                 self.res_idx = 0
             else:
                 self.res = []
-            if self.res:
-                y, x = self.res[self.res_idx]
-                goto_y(y + 1)
-                goto_x(x + 1)
 
         def next_result():
-            if self.res:
-                if self.res_idx < len(self.res) - 1:
-                    self.res_idx += 1
-                else:
-                    self.res_idx = 0
-                y, x = self.res[self.res_idx]
-                goto_y(y + 1)
-                goto_x(x + 1)
+            if not self.res:
+                return
+            yp, xp = self.win_y + self.y, self.win_x + self.x
+            # List of result indices on/after current row
+            idx = [self.res.index(i) for i in self.res
+                   if i[0] >= yp]
+            if not idx:
+                self.res_idx = 0
+            # Current row is after first result row
+            elif yp > self.res[idx[0]][0]:
+                self.res_idx = [i for i in idx
+                                if yp > self.res[i][0]][0]
+            # Current row is same as first result row
+            elif yp == self.res[idx[0]][0]:
+                try:
+                    self.res_idx = [i for i in idx
+                                    if self.res[i][0] == yp
+                                    and self.res[i][1] > xp][0]
+                except IndexError:
+                    self.res_idx = next((i for i in idx
+                                         if self.res[i][0] > yp), 0)
+            y, x = self.res[self.res_idx]
+            goto_y(y + 1)
+            goto_x(x + 1)
 
         def prev_result():
-            if self.res:
-                if self.res_idx > 0:
-                    self.res_idx -= 1
-                else:
+            if not self.res:
+                return
+            yp, xp = self.win_y + self.y, self.win_x + self.x
+            # List of result indices on/before current row
+            idx = [self.res.index(i) for i in self.res
+                   if i[0] <= yp]
+            if not idx:
+                self.res_idx = len(self.res) - 1
+            # Current row is after last result row
+            elif yp > self.res[idx[-1]][0]:
+                self.res_idx = idx[-1]
+            # Current row is same as last result row
+            elif yp == self.res[idx[-1]][0]:
+                try:
+                    self.res_idx = [i for i in idx
+                                    if self.res[i][0] == yp
+                                    and self.res[i][1] < xp][-1]
+                except IndexError:
+                    idx_iter = (i for i in idx if self.res[i][0] < yp)
+                    # Get the last value, or wrap back to the end
                     self.res_idx = len(self.res) - 1
-                self.x = self.y = 0
-                y, x = self.res[self.res_idx]
-                goto_y(y + 1)
-                goto_x(x + 1)
+                    for self.res_idx in idx_iter:
+                        pass
+            y, x = self.res[self.res_idx]
+            goto_y(y + 1)
+            goto_x(x + 1)
 
         def help():
             help_txt = readme()
@@ -336,18 +370,26 @@ class Viewer:
         def sort_by_column():
             xp = self.x + self.win_x
             self.data = sorted(self.data, key=itemgetter(xp))
+            # Reset search results
+            search_results()
 
         def sort_by_column_reverse():
             xp = self.x + self.win_x
             self.data = sorted(self.data, key=itemgetter(xp), reverse=True)
+            # Reset search results
+            search_results()
 
         def sort_by_column_natural():
             xp = self.x + self.win_x
             self.data = sorted_nicely(self.data, itemgetter(xp))
+            # Reset search results
+            search_results()
 
         def sort_by_column_natural_reverse():
             xp = self.x + self.win_x
             self.data = sorted_nicely(self.data, itemgetter(xp), rev=True)
+            # Reset search results
+            search_results()
 
         def sorted_nicely(ls, key, rev=False):
             """ Sort the given iterable in the way that humans expect.
