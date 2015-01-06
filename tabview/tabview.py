@@ -529,7 +529,8 @@ class Viewer:
         # Print the current cursor cell in the top left corner
         self.scr.move(0, 0)
         self.scr.clrtoeol()
-        s = "  {},{}  ".format(yp + 1, xp + 1)
+        s = "  {}/{},{}/{}  ".format(yp + 1, len(self.data),
+                                     xp + 1, self.max_x)
         addstr(self.scr, s, curses.A_REVERSE)
 
         # Adds the current cell content after the 'current cell' display
