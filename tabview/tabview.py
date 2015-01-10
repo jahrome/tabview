@@ -667,11 +667,11 @@ def detect_encoding(data):
         enc - system encoding
 
     """
-    enc_list = ['UTF-8', 'LATIN-1', 'iso8859-1', 'iso8859-2',
-                'UTF-16', 'CP720']
+    enc_list = ['utf-8', 'latin-1', 'iso8859-1', 'iso8859-2',
+                'utf-16', 'cp720']
     code = locale.getpreferredencoding(False)
-    if code not in enc_list:
-        enc_list.insert(0, code)
+    if code.lower() not in enc_list:
+        enc_list.insert(0, code.lower())
     for c in enc_list:
         try:
             for line in data:
