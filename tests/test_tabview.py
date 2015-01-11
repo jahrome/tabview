@@ -33,12 +33,29 @@ def test_tabview_file():
             "28", "5", "WHITE", "FFFFFF", "00", ".58",
             "http://www.alphabroder.com",
             "/images/alp/prodDetail/035_00_p.jpg",
-            "/images/alp/prodGallery/035_00_g.jpg", "17.92", "035",
+            "/images/alp/prodGallery/035_00_g.jpg", 17.92, "035",
             "00766369145683", "100", "no", "Hanes", "6", "36", "1007", "no",
             "/images/alp/prodDetail/035_00_p.jpg",
             "/images/alp/backDetail/035_bk_00_p.jpg",
             "/images/alp/sideDetail/035_sd_00_p.jpg"]
-    res = t.process_file('sample/unicode-example-utf8.txt')[0:2]
-    assert(res == res1)
+    # Have to decode res1 and res2 from the utf-8 so they can be compared to
+    # the results from the file, which are unicode (py2) or string (py3)
+    code = 'utf-8'  # Per top line of file
+    res = t.process_file('sample/unicode-example-utf8.txt')
+    # Check that process_file returns a list of lists
+    assert type(res) == list and type(res[0]) == list
+    # Check the first utf-8 encoded file matches the sample data (res1)
+    try:
+        assert [i.decode(code) == res[-1][j] for j, i in enumerate(res1[0])]
+    except AttributeError:
+        # Python 3
+        assert [i == res[-1][j] for j, i in enumerate(res1[0])]
+    # Check the 2nd latin-1 encoded file matches the sample data (res2)
     res = t.process_file('sample/test_latin-1.csv')[-1]
-    assert(res == res2)
+    res3 = []
+    for i in res2:
+        try:
+            res3.append(str(i).decode(code))
+        except AttributeError:
+            res3.append(str(i))
+    assert res3 == res
