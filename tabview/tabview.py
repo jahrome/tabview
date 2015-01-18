@@ -123,6 +123,7 @@ class Viewer:
             raise ReloadException
 
         def delete():
+            self.data.insert(0, self.header)
             raise DeleteColumnException(self.win_x+self.x)
 
         def down():
