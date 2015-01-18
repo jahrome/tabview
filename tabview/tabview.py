@@ -48,6 +48,9 @@ else:
 class ReloadException(Exception):
     pass
 
+class DeleteColumnException(Exception):
+    def __init__(self, colnum):
+        self.colnum = colnum
 
 class QuitException(Exception):
     pass
@@ -118,6 +121,9 @@ class Viewer:
 
         def reload():
             raise ReloadException
+
+        def delete():
+            raise DeleteColumnException(self.win_x+self.x)
 
         def down():
             end = len(self.data) - 1
@@ -457,6 +463,7 @@ class Viewer:
                      'y':   yank_cell,
                      'r':   reload,
                      '?':   help,
+                     'd':   delete,
                      curses.KEY_F1:     help,
                      curses.KEY_UP:     up,
                      curses.KEY_DOWN:   down,
@@ -665,6 +672,11 @@ def get_column_widths(d):
             lengths[idx] = 250
     return lengths
 
+def del_column(d, colnum):
+    d = zip(*d)
+    d.pop(colnum)
+    return zip(*d)
+
 def pad_data(d):
     """Pad data rows to the length of the longest row.
 
@@ -673,10 +685,10 @@ def pad_data(d):
     """
     max_len = set((len(i) for i in d))
     if len(max_len) == 1:
-        return d, max(max_len)
+        return d
     else:
         max_len = max(max_len)
-        return [i + [""] * (max_len - len(i)) for i in d], max_len
+        return [i + [""] * (max_len - len(i)) for i in d]
 
 
 def readme():
@@ -744,9 +756,13 @@ def view(data, enc=None, width=None):
     except TypeError:
         pass
     try:
+        init = False
         while True:
             try:
-                data, num_columns = process_data(data, enc)
+                if not init:
+                    data = process_data(data, enc)
+                    init = True
+                num_columns = max(set((len(i) for i in data)))
                 if width:
                     column_width = [width for i in xrange(0, num_columns)]
                 else:
@@ -756,6 +772,8 @@ def view(data, enc=None, width=None):
                 return 0
             except ReloadException:
                 continue
+            except DeleteColumnException, e:
+                data = del_column(data, e.colnum)
     finally:
         if lc_all is not None:
             locale.setlocale(locale.LC_ALL, lc_all)
